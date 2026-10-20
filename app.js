@@ -72,7 +72,7 @@ class QuizApp {
                     height: 450, // 設定輸出高度
                 });
 
-                const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.6);
 
                 if (this.currentCropCallback) {
                     this.currentCropCallback(croppedDataUrl);
