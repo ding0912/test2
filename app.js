@@ -521,45 +521,28 @@ class QuizApp {
         const modal = document.getElementById('quote-modal');
         const modalBlessingText = document.getElementById('modal-blessing-text');
         const modalBlessingImg = document.getElementById('modal-blessing-img');
+        
+        // 取得正確答案文字
+        const correctAnswerText = qData.options ? qData.options[qData.correctIndex] : '';
+        
+        // 更新答錯/答對的提示狀態與正確答案文字
+        const statusTitle = document.getElementById('modal-status-title');
+        const correctAnswerElem = document.getElementById('modal-correct-answer-text');
+        
+        if (statusTitle) {
+            statusTitle.textContent = isCorrect ? "🎉 回答正確！" : "❌ 回答錯誤";
+            statusTitle.className = isCorrect 
+                ? "block text-sm font-bold text-emerald-400 mb-1" 
+                : "block text-sm font-bold text-rose-400 mb-1";
+        }
+        
+        if (correctAnswerElem) {
+            correctAnswerElem.textContent = `正確答案是：${correctAnswerText}`;
+            correctAnswerElem.classList.remove('hidden');
+        }
 
         if (modalBlessingText) modalBlessingText.textContent = isCorrect ? qData.blessingText : qData.customMessage;
         if (modalBlessingImg) modalBlessingImg.src = isCorrect ? (qData.imageUrl || 'https://placehold.co/200x200/311042/amber?text=✨') : (qData.wrongImageUrl || 'https://placehold.co/200x200/311042/rose?text=❌');
-
-        modal?.classList.remove('hidden');
-
-        if (this.autoAdvanceTimer) {
-            clearTimeout(this.autoAdvanceTimer);
-            this.autoAdvanceTimer = null;
-        }
-
-        const handleModalClick = () => {
-            modal?.removeEventListener('click', handleModalClick);
-            if (this.autoAdvanceTimer) {
-                clearTimeout(this.autoAdvanceTimer);
-                this.autoAdvanceTimer = null;
-            }
-            modal?.classList.add('hidden');
-            this.nextQuestion();
-        };
-
-        modal?.addEventListener('click', handleModalClick);
-
-        this.autoAdvanceTimer = setTimeout(() => {
-            modal?.removeEventListener('click', handleModalClick);
-            modal?.classList.add('hidden');
-            this.nextQuestion();
-        }, 7000);
-    }
-
-    nextQuestion() {
-        this.currentIndex++;
-        if (this.currentIndex < this.questions.length) {
-            this.renderQuestion();
-        } else {
-            this.showResults();
-        }
-    }
-
     showResults() {
         document.getElementById('game-view')?.classList.add('hidden');
         document.getElementById('result-view')?.classList.remove('hidden');
