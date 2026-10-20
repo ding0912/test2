@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>觀眾留言猜謎 Quiz Game</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Cropper.js CDN (補上此區塊) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Zen+Maru+Gothic:wght@500;700;900&display=swap"
+        rel="stylesheet">
+
+    <style>
+        #question-title {
+            font-family: 'Noto Sans TC', sans-serif;
+            font-weight: 700;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        header,
+        main,
+        footer,
+        div,
+        section {
+            position: relative;
+            z-index: 1;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.07);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .pop-in {
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes popIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.8) translateY(20px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .fade-in-slow {
+            animation: fadeInSlow 1.2s ease-in-out forwards;
+        }
+
+        @keyframes fadeInSlow {
+            0% {
+                opacity: 0;
+                transform: scale(0.98);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+    </style>
+</head>
+
+<body class="text-slate-100 flex flex-col justify-between p-4 sm:p-6 min-h-screen">
+
+    <!-- Navbar / Header -->
+    <header
+        class="max-w-3xl w-full mx-auto flex justify-between items-center py-3 px-4 rounded-2xl glass-card shadow-lg mb-6">
+        <div id="dev-logo-trigger" class="flex items-center gap-3 cursor-pointer select-none group"
+            title="點擊 3 次解鎖開發者模式">
+            <div
+                class="bg-gradient-to-tr from-amber-400 to-rose-500 p-2.5 rounded-xl shadow-md text-slate-900 font-bold group-hover:scale-105 transition-transform">
+                <i data-lucide="sparkles" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+                <h1
+                    class="font-extrabold text-lg sm:text-xl tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-amber-200 via-rose-300 to-purple-300">
+                    觀眾留言猜謎
+                </h1>
+                <p class="text-xs text-slate-400">解開難題，解鎖專屬祝福</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="btn-editor-toggle"
+                class="hidden flex items-center gap-1.5 text-xs sm:text-sm bg-purple-600/40 hover:bg-purple-600/70 text-purple-200 border border-purple-400/30 px-3 py-2 rounded-xl transition-all">
+                <i data-lucide="edit-3" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">自訂題目</span>
+            </button>
+            <button id="btn-sound-toggle"
+                class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+                title="切換音效與背景音樂">
+                <i data-lucide="volume-2" id="sound-icon" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-3xl w-full mx-auto flex-grow flex flex-col justify-center">
+        <!-- Start Screen -->
+        <div id="start-view"
+            class="glass-card p-8 sm:p-10 rounded-3xl text-center space-y-6 shadow-2xl pop-in max-w-md mx-auto my-auto">
+            <div
+                class="inline-flex p-4 bg-gradient-to-tr from-amber-400/20 to-rose-500/20 rounded-full border border-amber-400/30 text-amber-300">
+                <i data-lucide="sparkles" class="w-10 h-10"></i>
+            </div>
+            <div class="space-y-2">
+                <h2
+                    class="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-rose-300 to-purple-300">
+                    觀眾留言猜謎
+                </h2>
+                <p class="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                    解開難題，解鎖專屬祝福！點擊下方按鈕開始挑戰。
+                </p>
+            </div>
+            <button id="btn-start-game"
+                class="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-amber-400 via-rose-500 to-purple-600 hover:opacity-95 text-slate-950 font-black text-sm sm:text-base rounded-2xl shadow-xl transition-all transform hover:scale-105 flex items-center justify-center gap-2 mx-auto">
+                <i data-lucide="play" class="w-5 h-5 fill-slate-950"></i> 開始遊戲
+            </button>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-view" class="hidden space-y-6">
+            <div id="question-card"
+                class="glass-card p-6 sm:p-8 rounded-3xl shadow-2xl relative overflow-hidden transition-all duration-300">
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-3">
+                        <span id="question-tag"
+                            class="inline-block px-3 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-full text-xs font-semibold">
+                            第 1 題
+                        </span>
+                        <span id="question-date-badge"
+                            class="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-full text-xs font-semibold">
+                            <i data-lucide="calendar" class="w-3.5 h-3.5 text-indigo-300"></i>
+                            <span id="question-date-text">2026/05/20</span>
+                        </span>
+                    </div>
+
+                    <div id="question-content-container" class="space-y-3">
+                        <h2 id="question-title" class="text-xl sm:text-2xl font-bold leading-relaxed text-slate-100">
+                            題目載入中...
+                        </h2>
+                        <div id="question-img-wrapper"
+                            class="hidden rounded-2xl overflow-hidden border border-slate-700/50 shadow-md max-w-md mx-auto">
+                            <img id="question-img-element" src="" alt="題目圖片"
+                                class="w-full h-auto max-h-80 object-contain mx-auto bg-slate-900/50">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="options-container" class="grid grid-cols-1 gap-3.5"></div>
+            </div>
+
+            <div class="glass-card p-4 rounded-2xl flex items-center justify-between gap-4 shadow-md">
+                <div class="flex-grow">
+                    <div class="flex justify-between text-xs text-slate-300 mb-1 font-medium">
+                        <span id="progress-text">進度：1 / 5</span>
+                        <span id="score-text" class="text-amber-400 font-bold">得分：0</span>
+                    </div>
+                    <div
+                        class="w-full bg-slate-800/80 rounded-full h-2.5 overflow-hidden p-0.5 border border-slate-700">
+                        <div id="progress-bar"
+                            class="bg-gradient-to-r from-amber-400 to-rose-500 h-full rounded-full transition-all duration-300"
+                            style="width: 20%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Completion Screen -->
+        <div id="result-view"
+            class="hidden glass-card p-6 sm:p-8 rounded-3xl text-center space-y-6 shadow-2xl pop-in relative overflow-hidden">
+            <div>
+                <h2
+                    class="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-rose-300 to-purple-300 tracking-wider">
+                    特別感謝人員名單
+                </h2>
+                <p class="text-slate-400 text-xs sm:text-sm max-w-md mx-auto mt-2">
+                    感謝每一位出現在留言與正確解答中的觀眾好朋友！
+                </p>
+            </div>
+
+            <div
+                class="bg-slate-950/70 p-5 sm:p-6 rounded-2xl border border-amber-500/20 shadow-inner max-w-lg mx-auto">
+                <div id="movie-credits-grid"
+                    class="grid grid-cols-2 gap-x-4 sm:gap-x-6 gap-y-3 text-left max-w-xs sm:max-w-md mx-auto font-medium">
+                </div>
+            </div>
+
+            <div class="space-y-3 pt-2">
+                <p id="credits-countdown-text" class="text-xs text-amber-300/80 font-medium animate-pulse">
+                    ( 10 秒後自動轉換特別畫面... )
+                </p>
+                <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                    <button id="btn-show-sakura-now"
+                        class="w-full sm:w-auto px-5 py-2.5 bg-purple-600/80 hover:bg-purple-600 text-purple-100 font-semibold rounded-xl text-xs transition border border-purple-400/30 flex items-center justify-center gap-1.5">
+                        <i data-lucide="image" class="w-4 h-4"></i> 提前觀看紀念背景
+                    </button>
+                    <button id="btn-restart"
+                        class="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-slate-950 font-bold rounded-xl shadow-lg text-xs transition flex items-center justify-center gap-1.5">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i> 再次挑戰
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sakura Scene View -->
+        <div id="sakura-view"
+            class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center p-4 sm:p-6 bg-slate-950/90 transition-all duration-1000 fade-in-slow gap-4 sm:gap-6">
+            <div class="relative z-10 text-center">
+                <h2
+                    class="text-2xl sm:text-4xl font-black text-amber-100 drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)] tracking-wider leading-tight bg-slate-900/80 px-6 py-2.5 sm:py-3 rounded-2xl border border-rose-400/30 backdrop-blur-md inline-block shadow-lg">
+                    汪醬二周年快樂!
+                </h2>
+            </div>
+
+            <!-- 移除 style="background-image: url(...)" -->
+            <div id="sakura-img-frame"
+                class="relative w-full max-w-5xl aspect-video rounded-3xl overflow-hidden border border-rose-400/30 shadow-2xl bg-cover bg-center cursor-pointer transition-transform duration-300 hover:scale-[1.01]"
+                title="點擊關閉圖片">
+            </div>
+
+            <button id="btn-sakura-restart" class="hidden"></button>
+        </div>
+
+        <!-- Editor View -->
+        <div id="editor-view" class="hidden glass-card p-6 sm:p-8 rounded-3xl shadow-2xl space-y-6 pop-in">
+            <div class="flex justify-between items-center border-b border-slate-700/60 pb-4">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="settings" class="w-6 h-6 text-purple-400"></i>
+                    <h2 class="text-xl font-bold">遊戲自訂與音效背景設定</h2>
+                </div>
+                <button id="btn-close-editor" class="text-slate-400 hover:text-slate-100 p-1">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <!-- Tab Buttons -->
+            <div class="flex border-b border-slate-700/60 text-sm font-semibold overflow-x-auto">
+                <button id="tab-questions"
+                    class="px-3 sm:px-4 py-2 text-purple-400 border-b-2 border-purple-400 flex items-center gap-1.5 whitespace-nowrap transition">
+                    <i data-lucide="help-circle" class="w-4 h-4"></i> 題目與金句
+                </button>
+                <button id="tab-sounds"
+                    class="px-3 sm:px-4 py-2 text-slate-400 hover:text-slate-200 border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap transition">
+                    <i data-lucide="music" class="w-4 h-4"></i> 音效設定
+                </button>
+                <button id="tab-bg"
+                    class="px-3 sm:px-4 py-2 text-slate-400 hover:text-slate-200 border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap transition">
+                    <i data-lucide="image" class="w-4 h-4"></i> 背景設定
+                </button>
+            </div>
+
+            <!-- Panel 1: Questions List -->
+            <div id="panel-questions" class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-sm text-slate-300 font-medium">目前的題目清單</span>
+                    <button id="btn-add-new-q"
+                        class="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded-lg flex items-center gap-1 transition">
+                        <i data-lucide="plus" class="w-4 h-4"></i> 新增題目
+                    </button>
+                </div>
+                <div id="editor-questions-list" class="space-y-3 max-h-72 overflow-y-auto pr-1"></div>
+            </div>
+
+            <!-- Panel 2: Sound Settings -->
+            <div id="panel-sounds" class="hidden space-y-5">
+                <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-800 space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-2">1. 選擇內建音效風格 (合成器)</label>
+                        <select id="select-sound-theme"
+                            class="w-full bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-xl px-3 py-2.5 focus:outline-none focus:border-purple-500">
+                            <option value="classic">✨ 經典金句風格 (Classic Chime)</option>
+                            <option value="chiptune">👾 8-Bit 復古電玩 (8-Bit Arcade)</option>
+                            <option value="marimba">🔮 魔法水晶馬林巴 (Marimba)</option>
+                            <option value="pop">🎈 歡樂卡通 Pop (Playful Bubbles)</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-3 pt-2 border-t border-slate-800">
+                        <label class="block text-xs font-bold text-slate-300">2. 或上傳自訂音效檔 (MP3 / WAV，2MB以內)</label>
+                        <div
+                            class="flex items-center justify-between bg-slate-800/80 p-3 rounded-xl border border-slate-700 text-xs">
+                            <span class="font-medium text-emerald-300 flex items-center gap-1.5">
+                                <i data-lucide="volume-2" class="w-4 h-4"></i> 答對音效
+                            </span>
+                            <div class="flex items-center gap-2">
+                                <button onclick="previewAudio('correct')"
+                                    class="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition">試聽</button>
+                                <label
+                                    class="cursor-pointer bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded-lg transition">
+                                    上傳
+                                    <input type="file" id="file-sound-correct" accept="audio/*" class="hidden">
+                                </label>
+                                <button id="btn-clear-sound-correct" onclick="clearCustomAudio('correct')"
+                                    class="hidden text-rose-400 hover:text-rose-300 px-1">清除</button>
+                            </div>
+                        </div>
+
+                        <div
+                            class="flex items-center justify-between bg-slate-800/80 p-3 rounded-xl border border-slate-700 text-xs">
+                            <span class="font-medium text-rose-300 flex items-center gap-1.5">
+                                <i data-lucide="volume-x" class="w-4 h-4"></i> 答錯音效
+                            </span>
+                            <div class="flex items-center gap-2">
+                                <button onclick="previewAudio('wrong')"
+                                    class="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition">試聽</button>
+                                <label
+                                    class="cursor-pointer bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded-lg transition">
+                                    上傳
+                                    <input type="file" id="file-sound-wrong" accept="audio/*" class="hidden">
+                                </label>
+                                <button id="btn-clear-sound-wrong" onclick="clearCustomAudio('wrong')"
+                                    class="hidden text-rose-400 hover:text-rose-300 px-1">清除</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 pt-3 border-t border-slate-800">
+                        <label class="block text-xs font-bold text-slate-300">3. 背景音樂 (BGM) 設定 (檔案限制 5MB 以內)</label>
+                        <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700 space-y-2.5 text-xs">
+                            <div class="flex items-center justify-between">
+                                <span class="font-medium text-purple-300 flex items-center gap-1.5">
+                                    <i data-lucide="music-2" class="w-4 h-4"></i> 背景音樂檔 (MP3/WAV)
+                                </span>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="previewAudio('bgm')"
+                                        class="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition">試聽/暫停</button>
+                                    <label
+                                        class="cursor-pointer bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded-lg transition">
+                                        上傳
+                                        <input type="file" id="file-sound-bgm" accept="audio/*" class="hidden">
+                                    </label>
+                                    <button id="btn-clear-sound-bgm" onclick="clearCustomAudio('bgm')"
+                                        class="hidden text-rose-400 hover:text-rose-300 px-1">清除</button>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 pt-1 border-t border-slate-700/50">
+                                <span class="text-slate-400 text-[11px]">BGM 音量:</span>
+                                <input type="range" id="input-bgm-volume" min="0" max="1" step="0.05" value="0.4"
+                                    class="w-full accent-purple-500 h-1.5 bg-slate-700 rounded-lg cursor-pointer">
+                                <span id="bgm-volume-val" class="text-[11px] text-slate-300 w-8">40%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 3: Background Settings -->
+            <div id="panel-bg" class="hidden space-y-5">
+                <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-800 space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1">1. 自訂遊戲全站背景圖片</label>
+                        <p class="text-xs text-slate-400 mb-3">貼上圖片網址或上傳本地圖檔，為遊戲打造獨一無二的視覺主題氛圍。</p>
+
+                        <div
+                            class="relative w-full h-32 rounded-2xl overflow-hidden border border-slate-700 bg-slate-800 mb-3 flex items-center justify-center shadow-inner">
+                            <div id="bg-preview-box" class="absolute inset-0 bg-cover bg-center transition-all"></div>
+                            <span id="bg-preview-text"
+                                class="relative z-10 text-xs text-slate-200 bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-700 backdrop-blur-md">
+                                預設深色漸層背景
+                            </span>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-[11px] font-medium text-slate-400 mb-1">輸入圖片網址
+                                    (https://...)</label>
+                                <input type="text" id="input-bg-url"
+                                    class="w-full bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-purple-500"
+                                    placeholder="例如：https://images.unsplash.com/photo-...">
+                            </div>
+
+                            <div
+                                class="flex items-center justify-between bg-slate-800/80 p-2.5 rounded-xl border border-slate-700 text-xs">
+                                <span class="font-medium text-slate-300">或上傳本地全站背景圖：</span>
+                                <label
+                                    class="cursor-pointer bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg text-slate-200 text-xs border border-slate-600 transition">
+                                    選擇檔案
+                                    <input type="file" id="file-bg-image" accept="image/*" class="hidden">
+                                </label>
+                            </div>
+
+                            <div class="flex justify-end pt-1">
+                                <button id="btn-reset-bg"
+                                    class="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 bg-rose-500/10 hover:bg-rose-500/20 px-3 py-1.5 rounded-xl border border-rose-500/20 transition">
+                                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> 恢復預設背景
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-800 space-y-3">
+                        <div>
+                            <label class="block text-xs font-bold text-amber-300 mb-1">🌸 2. 結尾 16:9 紀念畫面背景圖片</label>
+                            <p class="text-xs text-slate-400 mb-3">設定最後謝幕完畢後顯示的 16:9 紀念背景圖（可上傳本地圖檔或輸入網址）。</p>
+
+                            <div
+                                class="relative w-full aspect-video rounded-2xl overflow-hidden border border-rose-400/30 bg-slate-800 mb-3 flex items-center justify-center shadow-inner">
+                                <div id="sakura-bg-preview-box"
+                                    class="absolute inset-0 bg-cover bg-center transition-all"></div>
+                                <span id="sakura-bg-preview-text"
+                                    class="relative z-10 text-xs text-slate-200 bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-700 backdrop-blur-md">
+                                    預設櫻花景色紀念圖
+                                </span>
+                            </div>
+
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-[11px] font-medium text-slate-400 mb-1">輸入網址
+                                        (https://...)</label>
+                                    <input type="text" id="input-sakura-bg-url"
+                                        class="w-full bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-amber-500"
+                                        placeholder="例如：https://images.unsplash.com/photo-...">
+                                </div>
+
+                                <div
+                                    class="flex items-center justify-between bg-slate-800/80 p-2.5 rounded-xl border border-slate-700 text-xs">
+                                    <span class="font-medium text-amber-200">上傳本地 16:9 背景圖：</span>
+                                    <label
+                                        class="cursor-pointer bg-amber-600 hover:bg-amber-500 px-3 py-1.5 rounded-lg text-slate-950 font-bold text-xs border border-amber-400/40 transition">
+                                        選擇檔案
+                                        <input type="file" id="file-sakura-bg-image" accept="image/*" class="hidden">
+                                    </label>
+                                </div>
+
+                                <div class="flex justify-end pt-1">
+                                    <button id="btn-reset-sakura-bg"
+                                        class="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 bg-rose-500/10 hover:bg-rose-500/20 px-3 py-1.5 rounded-xl border border-rose-500/20 transition">
+                                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> 恢復預設櫻花圖
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center pt-4 border-t border-slate-700/60">
+                <button id="btn-trigger-reset-dialog" class="text-xs text-rose-400 hover:text-rose-300 underline">
+                    重置為預設題目與音效
+                </button>
+                <button id="btn-save-and-play"
+                    class="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-semibold rounded-xl hover:opacity-90 transition flex items-center gap-2">
+                    <i data-lucide="play" class="w-4 h-4"></i> 保存並開始遊戲
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- 補上缺少的 Crop Modal 彈窗區塊 -->
+    <div id="crop-modal"
+        class="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+        <div class="glass-card max-w-lg w-full p-6 rounded-3xl shadow-2xl border border-slate-700 space-y-4">
+            <h3 class="text-lg font-bold text-purple-300">裁切圖片</h3>
+            <div class="max-h-80 overflow-hidden rounded-xl border border-slate-700 bg-slate-900">
+                <img id="crop-target-img" src="" alt="裁切圖片" class="max-w-full block mx-auto">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button id="btn-cancel-crop"
+                    class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-xl">取消</button>
+                <button id="btn-confirm-crop"
+                    class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl">確定裁切</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Modal for Correct / Incorrect Answer Pop-up -->
+    <div id="quote-modal"
+        class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden transition-opacity duration-300">
+        <div class="glass-card max-w-3xl w-full p-6 sm:p-8 rounded-3xl shadow-2xl  text-center relative overflow-hidden pop-in max-h-[90vh] overflow-y-auto cursor-pointer"
+            id="quote-modal-content">
+            <div class="absolute -top-12 -right-12 w-32 h-32 bg-amber-500/20 rounded-full blur-2xl"></div>
+            <div class="absolute -bottom-12 -left-12 w-32 h-32 bg-rose-500/20 rounded-full blur-2xl"></div>
+
+            <div id="modal-wrong-img-container"
+                class="hidden max-w-md w-full max-h-72 rounded-2xl overflow-hidden bg-slate-800/80 border-2 border-rose-400/50 relative shadow-xl mx-auto shrink-0 flex items-center justify-center mb-3">
+                <img id="modal-wrong-img" src="" alt="答錯圖片"
+                    class="w-full h-auto max-h-72 object-contain mx-auto transition-transform duration-500 hover:scale-105"
+                    onerror="this.src='https://placehold.co/200x200/311042/rose?text=❌'">
+            </div>
+
+            <h3 id="modal-status-title" class="hidden text-xs uppercase tracking-widest text-rose-400 font-bold mb-1">
+                回答錯誤</h3>
+            <p id="modal-correct-answer-text" class="hidden text-sm text-amber-300/90 font-medium mt-1 mb-2"></p>
+
+            <div id="modal-blessing-box"
+                class="my-4 max-w-full mx-auto text-center p-4 sm:p-5 space-y-3 flex flex-col items-center">
+                <div id="modal-img-container"
+                    class="max-w-md w-full max-h-72 rounded-2xl overflow-hidden relative mx-auto shrink-0 flex items-center justify-center">
+                    <img id="modal-blessing-img" src="" alt="祝福圖片"
+                        class="w-full h-auto max-h-72 object-contain mx-auto transition-transform duration-500 hover:scale-105"
+                        onerror="this.src='https://placehold.co/200x200/311042/amber?text=✨'">
+                </div>
+                <div id="modal-blessing-text"
+                    class="text-base sm:text-lg font-bold text-amber-200 leading-relaxed px-2 break-words w-full whitespace-pre-line">
+                </div>
+            </div>
+
+            <div id="modal-quote-container"
+                class="my-3 max-w-full mx-auto p-4 bg-slate-900/80 rounded-2xl border border-amber-500/20 relative hidden">
+                <i data-lucide="quote" class="w-6 h-6 text-amber-500/20 absolute -top-2 -left-2"></i>
+                <p id="modal-quote-text"
+                    class="text-sm sm:text-base font-medium text-slate-200 leading-relaxed italic px-2 break-words w-full">
+                </p>
+            </div>
+
+            <div id="modal-auto-advance" class="space-y-2 pt-2 border-t border-slate-800/80">
+                <div class="flex justify-between items-center text-xs text-slate-400 font-medium">
+                    <span id="auto-advance-text">正在自動進入下一題...</span>
+                    <span id="auto-advance-sec" class="font-bold text-amber-300">3.0s</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                    <div id="auto-advance-bar"
+                        class="bg-gradient-to-r from-amber-400 to-rose-500 h-full w-full transition-all duration-100 ease-linear">
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-500 pt-1">（點擊視窗任意處可立即進入下一題）</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Question Item Form Modal -->
+    <div id="edit-item-modal"
+        class="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+        <div
+            class="glass-card max-w-lg w-full p-6 rounded-3xl shadow-2xl border border-slate-700 space-y-4 max-h-[90vh] overflow-y-auto">
+            <h3 id="edit-modal-title" class="text-lg font-bold text-purple-300">編輯題目與祝福設定</h3>
+
+            <div class="space-y-2">
+                <label class="block text-xs font-medium text-purple-300 mb-1">
+                    📝 問題敘述 (文字與圖片選填)
+                </label>
+                <input type="text" id="edit-q-title"
+                    class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-purple-500"
+                    placeholder="可輸入題目文字敘述（可留空）">
+
+                <div id="edit-q-pic-preview-box"
+                    class="hidden flex items-center gap-3 bg-slate-900/60 p-2.5 rounded-2xl border border-slate-800">
+                    <div class="w-16 h-16 rounded-xl overflow-hidden bg-slate-800 border border-purple-400/40 shrink-0">
+                        <img id="edit-q-pic-preview" src="" alt="題目圖片預覽" class="w-full h-full object-cover">
+                    </div>
+                    <div class="text-xs text-purple-300 font-medium">已新增問題敘述圖片</div>
+                </div>
+
+                <div class="space-y-2 pt-1">
+                    <input type="text" id="edit-q-pic-url"
+                        class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-purple-500"
+                        placeholder="問題敘述圖片網址 https://...">
+                    <div
+                        class="flex items-center justify-between bg-slate-900/50 p-2.5 rounded-xl border border-slate-800 text-xs">
+                        <span class="text-slate-400">上傳問題圖片：</span>
+                        <label
+                            class="cursor-pointer bg-purple-700 hover:bg-purple-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition">
+                            選擇檔案
+                            <input type="file" id="edit-q-pic-file" accept="image/*" class="hidden">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-indigo-300 mb-1">
+                    📅 題目發生日期 (顯示於題目右上方)
+                </label>
+                <input type="text" id="edit-q-date"
+                    class="w-full bg-slate-900/80 border border-indigo-500/40 rounded-xl px-3 py-2 text-sm text-indigo-100 focus:outline-none focus:border-indigo-400 placeholder-slate-500"
+                    placeholder="例如：2026/05/20 或 2024年春季">
+            </div>
+
+            <div class="space-y-2">
+                <label class="block text-xs font-medium text-slate-300">選項（請點選單選鈕指定哪一個是正確答案）</label>
+                <div id="edit-options-list" class="space-y-2"></div>
+            </div>
+
+            <div>
+                <div class="flex justify-between items-center mb-1">
+                    <label class="block text-xs font-medium text-amber-300">
+                        🎉 答對時的專屬祝福詞 (最多 60 字，支援 Enter 換行)
+                    </label>
+                    <span id="edit-q-blessing-count" class="text-[10px] text-amber-400/80 font-mono">0 / 60</span>
+                </div>
+                <textarea id="edit-q-blessing" maxlength="200" rows="5"
+                    class="w-full bg-slate-900/80 border border-amber-500/40 rounded-xl px-3 py-2 text-sm text-amber-100 focus:outline-none focus:border-amber-400 placeholder-slate-500"
+                    placeholder="例如：✨ 祝福汪醬二周年快樂！&#10;願你每天都充滿歡笑與勇氣！"></textarea>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-amber-300 mb-1">
+                    🖼️ 答對展出圖片 (可輸入圖片網址或選擇本地圖檔)
+                </label>
+                <div class="flex items-center gap-3 bg-slate-900/60 p-3 rounded-2xl border border-slate-800 mb-2">
+                    <div
+                        class="w-14 h-14 rounded-full overflow-hidden bg-slate-800 border-2 border-amber-400/50 shrink-0 ring-2 ring-amber-500/20">
+                        <img id="edit-q-img-preview" src="https://placehold.co/200x200/311042/amber?text=✨" alt="圖片預覽"
+                            class="w-full h-full object-cover"
+                            onerror="this.src='https://placehold.co/200x200/311042/amber?text=✨'">
+                    </div>
+                    <div class="text-xs text-slate-300 overflow-hidden flex-1">
+                        <p class="text-[11px] text-amber-400 font-semibold mb-0.5">🎉 即時祝福與圖片預覽：</p>
+                        <p id="edit-q-blessing-preview" class="font-bold text-amber-200 break-words leading-tight">✨
+                            祝福詞將顯示於此</p>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <input type="text" id="edit-q-image-url"
+                        class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-purple-500"
+                        placeholder="圖片網址 https://...">
+                    <div
+                        class="flex items-center justify-between bg-slate-900/50 p-2.5 rounded-xl border border-slate-800 text-xs">
+                        <span class="text-slate-400">上傳本地圖片：</span>
+                        <label
+                            class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs border border-slate-700">
+                            選擇檔案
+                            <input type="file" id="edit-q-image-file" accept="image/*" class="hidden">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-rose-300 mb-1">
+                    ❌ 答錯展出圖片/圖示 (可輸入圖片網址或選擇本地圖檔)
+                </label>
+                <div class="flex items-center gap-3 bg-slate-900/60 p-3 rounded-2xl border border-slate-800 mb-2">
+                    <div
+                        class="w-14 h-14 rounded-full overflow-hidden bg-slate-800 border-2 border-rose-400/50 shrink-0 ring-2 ring-rose-500/20">
+                        <img id="edit-q-wrong-img-preview" src="https://placehold.co/200x200/311042/rose?text=❌"
+                            alt="答錯圖片預覽" class="w-full h-full object-cover"
+                            onerror="this.src='https://placehold.co/200x200/311042/rose?text=❌'">
+                    </div>
+                    <div class="text-xs text-slate-300 overflow-hidden flex-1">
+                        <p class="text-[11px] text-rose-400 font-semibold mb-0.5">❌ 答錯圖片預覽：</p>
+                        <p class="text-xs text-slate-400">答錯時將顯示此圖片替代預設圖示</p>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <input type="text" id="edit-q-wrong-image-url"
+                        class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-rose-500"
+                        placeholder="圖片網址 https://...">
+                    <div
+                        class="flex items-center justify-between bg-slate-900/50 p-2.5 rounded-xl border border-slate-800 text-xs">
+                        <span class="text-slate-400">上傳本地圖片：</span>
+                        <label
+                            class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs border border-slate-700">
+                            選擇檔案
+                            <input type="file" id="edit-q-wrong-image-file" accept="image/*" class="hidden">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="flex justify-between items-center mb-1">
+                    <label class="block text-xs font-medium text-slate-300">
+                        💬 題目指定語句/知識金句 (答錯時顯示，最多 40 字)
+                    </label>
+                    <span id="edit-q-msg-count" class="text-[10px] text-slate-400 font-mono">0 / 40</span>
+                </div>
+                <textarea id="edit-q-message" maxlength="200" rows="6"
+                    class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-purple-500 placeholder-slate-500"
+                    placeholder="例如：這是來自觀眾的特別留言！再接再厲！"></textarea>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button id="btn-cancel-q-edit"
+                    class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-xl">取消</button>
+                <button id="btn-save-q-edit"
+                    class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl">保存題目與祝福</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notice Modal -->
+    <div id="notice-modal"
+        class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+        <div
+            class="glass-card max-w-sm w-full p-6 rounded-3xl shadow-2xl border border-slate-700 text-center space-y-4 pop-in">
+            <div id="notice-icon-badge"
+                class="inline-flex p-3 bg-purple-500/20 text-purple-300 rounded-full border border-purple-500/30">
+                <i id="notice-icon" data-lucide="info" class="w-6 h-6"></i>
+            </div>
+            <h3 id="notice-title" class="text-base font-bold text-slate-100">提示資訊</h3>
+            <p id="notice-message" class="text-xs text-slate-300 leading-relaxed"></p>
+            <div id="notice-buttons" class="flex justify-center gap-3 pt-2">
+                <button id="btn-notice-confirm"
+                    class="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl">確定</button>
+                <button id="btn-notice-cancel"
+                    class="hidden px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center text-xs text-slate-500 py-4">
+        觀眾留言猜謎問答遊戲 &copy; 2026 Interactive Quiz Game
+    </footer>
+
+    <!-- 引進主程式 (ES Module 模式) -->
+    <script type="module" src="./app.js"></script>
+</body>
+
+</html>
