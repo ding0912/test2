@@ -72,7 +72,7 @@ class QuizApp {
                     height: 450, // 設定輸出高度
                 });
 
-                const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.6);
+                const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
 
                 if (this.currentCropCallback) {
                     this.currentCropCallback(croppedDataUrl);
@@ -521,7 +521,6 @@ class QuizApp {
         const modal = document.getElementById('quote-modal');
         const modalBlessingText = document.getElementById('modal-blessing-text');
         const modalBlessingImg = document.getElementById('modal-blessing-img');
-        
         // 取得正確答案文字
         const correctAnswerText = qData.options ? qData.options[qData.correctIndex] : '';
         
@@ -543,6 +542,42 @@ class QuizApp {
 
         if (modalBlessingText) modalBlessingText.textContent = isCorrect ? qData.blessingText : qData.customMessage;
         if (modalBlessingImg) modalBlessingImg.src = isCorrect ? (qData.imageUrl || 'https://placehold.co/200x200/311042/amber?text=✨') : (qData.wrongImageUrl || 'https://placehold.co/200x200/311042/rose?text=❌');
+
+        modal?.classList.remove('hidden');
+
+        if (this.autoAdvanceTimer) {
+            clearTimeout(this.autoAdvanceTimer);
+            this.autoAdvanceTimer = null;
+        }
+
+        const handleModalClick = () => {
+            modal?.removeEventListener('click', handleModalClick);
+            if (this.autoAdvanceTimer) {
+                clearTimeout(this.autoAdvanceTimer);
+                this.autoAdvanceTimer = null;
+            }
+            modal?.classList.add('hidden');
+            this.nextQuestion();
+        };
+
+        modal?.addEventListener('click', handleModalClick);
+
+        this.autoAdvanceTimer = setTimeout(() => {
+            modal?.removeEventListener('click', handleModalClick);
+            modal?.classList.add('hidden');
+            this.nextQuestion();
+        }, 7000);
+    }
+
+    nextQuestion() {
+        this.currentIndex++;
+        if (this.currentIndex < this.questions.length) {
+            this.renderQuestion();
+        } else {
+            this.showResults();
+        }
+    }
+
     showResults() {
         document.getElementById('game-view')?.classList.add('hidden');
         document.getElementById('result-view')?.classList.remove('hidden');
